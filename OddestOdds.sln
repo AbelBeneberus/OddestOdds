@@ -3,9 +3,9 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.6.33829.357
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "OddesOdds.PunterApp", "OddesOdds.PunterApp\OddesOdds.PunterApp.csproj", "{95B45D20-1500-460C-8CE2-AE8C5CA9B564}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "OddestOdds.PunterApp", "OddestOdds.PunterApp\OddestOdds.PunterApp.csproj", "{95B45D20-1500-460C-8CE2-AE8C5CA9B564}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "OddesOdds.HandlerApp", "OddesOdds.HandlerApp\OddesOdds.HandlerApp.csproj", "{DC189AA4-C33C-4D07-93F2-00593B5DE721}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "OddestOdds.HandlerApp", "OddestOdds.HandlerApp\OddestOdds.HandlerApp.csproj", "{DC189AA4-C33C-4D07-93F2-00593B5DE721}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "OddestOdds.Common", "OddestOdds.Common\OddestOdds.Common.csproj", "{CE34BE25-1ADA-48F0-A668-68BC688487EA}"
 EndProject
@@ -22,6 +22,8 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "test", "test", "{17E349D3-6D9F-42D3-9304-4792780B3158}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OddestOdds.UnitTest", "OddestOdds.UnitTest\OddestOdds.UnitTest.csproj", "{8D60A378-7E5B-486D-A2C9-7566B007F340}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OddestOdds.RealTime", "OddestOdds.RealTime\OddestOdds.RealTime.csproj", "{FF1BBE92-613D-4A71-B141-CE5D538F0993}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -61,6 +63,10 @@ Global
 		{8D60A378-7E5B-486D-A2C9-7566B007F340}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{8D60A378-7E5B-486D-A2C9-7566B007F340}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{8D60A378-7E5B-486D-A2C9-7566B007F340}.Release|Any CPU.Build.0 = Release|Any CPU
+		{FF1BBE92-613D-4A71-B141-CE5D538F0993}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{FF1BBE92-613D-4A71-B141-CE5D538F0993}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{FF1BBE92-613D-4A71-B141-CE5D538F0993}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{FF1BBE92-613D-4A71-B141-CE5D538F0993}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -74,6 +80,7 @@ Global
 		{8B3B9B39-55A2-451D-AF16-3883F18CE023} = {8E00805B-CB79-4FBA-8652-34BBD181BF2A}
 		{7AB7944F-9ACE-4E5B-876F-A60D47760DDB} = {8E00805B-CB79-4FBA-8652-34BBD181BF2A}
 		{8D60A378-7E5B-486D-A2C9-7566B007F340} = {17E349D3-6D9F-42D3-9304-4792780B3158}
+		{FF1BBE92-613D-4A71-B141-CE5D538F0993} = {8E00805B-CB79-4FBA-8652-34BBD181BF2A}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {525CE32B-16BE-4326-85D6-B4F45094C395}
