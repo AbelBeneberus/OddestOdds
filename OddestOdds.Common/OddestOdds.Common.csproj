@@ -7,4 +7,15 @@
     </PropertyGroup>
 
 
+
+    <ItemGroup>
+      <ProjectReference Include="..\OddestOdds.Data\OddestOdds.Data.csproj" />
+    </ItemGroup>
+
+
+
+
+
+
+
 </Project>

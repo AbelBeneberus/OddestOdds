@@ -6,4 +6,26 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
+
+  <ItemGroup>
+    <ProjectReference Include="..\OddestOdds.Caching\OddestOdds.Caching.csproj" />
+    <ProjectReference Include="..\OddestOdds.Common\OddestOdds.Common.csproj" />
+    <ProjectReference Include="..\OddestOdds.Data\OddestOdds.Data.csproj" />
+  </ItemGroup>
+
+
+
+
+  <ItemGroup>
+    <PackageReference Include="FluentValidation" Version="11.7.1" />
+  </ItemGroup>
+
+
+
+
+
+
+
+
+
 </Project>

@@ -1,4 +1,4 @@
-﻿namespace OddestOdds.Common.Configurations;
+﻿namespace OddestOdds.Data.Configuration;
 
 public class DatabaseConfiguration
 {

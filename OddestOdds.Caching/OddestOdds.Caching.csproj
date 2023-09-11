@@ -8,12 +8,18 @@
 
   <ItemGroup>
     <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="7.0.0" />
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
     <PackageReference Include="StackExchange.Redis" Version="2.6.122" />
   </ItemGroup>
 
 
   <ItemGroup>
     <ProjectReference Include="..\OddestOdds.Common\OddestOdds.Common.csproj" />
+    <ProjectReference Include="..\OddestOdds.Data\OddestOdds.Data.csproj" />
   </ItemGroup>
+
+
+
+
 
 </Project>

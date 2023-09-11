@@ -10,7 +10,7 @@ using OddestOdds.Data.Database;
 
 namespace OddestOdds.Data.Migrations
 {
-    [DbContext(typeof(FixtureContext))]
+    [DbContext(typeof(FixtureDbContext))]
     partial class FixtureContextModelSnapshot : ModelSnapshot
     {
         protected override void BuildModel(ModelBuilder modelBuilder)
@@ -28,7 +28,15 @@ namespace OddestOdds.Data.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<string>("AwayTeam")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<string>("FixtureName")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("HomeTeam")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 

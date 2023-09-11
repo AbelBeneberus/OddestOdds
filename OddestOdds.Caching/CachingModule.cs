@@ -1,4 +1,5 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
+using OddestOdds.Caching.Repositories;
 using OddestOdds.Caching.Services;
 using OddestOdds.Common.Configurations;
 
@@ -10,6 +11,7 @@ public static class CachingModule
         RedisConfiguration configuration)
     {
         services.AddSingleton<IRedisService>(new RedisService(configuration.Host));
+        services.AddScoped<ICacheRepository, RedisCacheRepository>();
         return services;
     }
 }
