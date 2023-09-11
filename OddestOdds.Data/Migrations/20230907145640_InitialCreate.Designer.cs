@@ -11,7 +11,7 @@ using OddestOdds.Data.Database;
 
 namespace OddestOdds.Data.Migrations
 {
-    [DbContext(typeof(FixtureContext))]
+    [DbContext(typeof(FixtureDbContext))]
     [Migration("20230907145640_InitialCreate")]
     partial class InitialCreate
     {

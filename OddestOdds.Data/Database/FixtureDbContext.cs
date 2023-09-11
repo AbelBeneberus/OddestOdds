@@ -3,13 +3,13 @@ using OddestOdds.Data.Models;
 
 namespace OddestOdds.Data.Database
 {
-    public class FixtureContext : DbContext
+    public class FixtureDbContext : DbContext
     {
         public DbSet<Fixture> Fixtures { get; set; } = null!;
         public DbSet<Market> Markets { get; set; } = null!;
         public DbSet<MarketSelection> MarketSelections { get; set; } = null!;
 
-        public FixtureContext(DbContextOptions<FixtureContext> options) : base(options)
+        public FixtureDbContext(DbContextOptions<FixtureDbContext> options) : base(options)
         {
         }
 
