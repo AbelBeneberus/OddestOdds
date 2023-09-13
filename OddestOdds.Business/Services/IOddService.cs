@@ -7,4 +7,6 @@ public interface IOddService
     Task<FixtureCreatedResponse> CreateFixtureAsync(CreateFixtureRequest request);
     Task CreateOddAsync(CreateOddRequest request);
     Task UpdateOddAsync(UpdateOddRequest request);
+    Task<GetOddResponse> GetAllOddsAsync();
+    Task<GetOddResponse> GetOddsByFixtureIds(IEnumerable<Guid> fixtureIds);
 }
