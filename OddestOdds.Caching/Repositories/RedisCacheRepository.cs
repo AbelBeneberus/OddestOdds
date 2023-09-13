@@ -136,6 +136,43 @@ namespace OddestOdds.Caching.Repositories
             }
         }
 
+        public async Task<IEnumerable<FixtureDto>> GetAllCachedFixturesAsync()
+        {
+            var fixtures = new List<FixtureDto>();
+            try
+            {
+                var keys = new List<RedisKey>();
+                var endpoints = _database.Multiplexer.GetEndPoints();
+                foreach (var endpoint in endpoints)
+                {
+                    var server = _database.Multiplexer.GetServer(endpoint);
+                    var dbKeys = server.Keys(pattern: "fixture:*");
+                    keys.AddRange(dbKeys);
+                }
+
+                foreach (var key in keys)
+                {
+                    var fixtureDetailsJson = await _database.StringGetAsync(key);
+                    if (!fixtureDetailsJson.IsNullOrEmpty)
+                    {
+                        var fixture = JsonConvert.DeserializeObject<FixtureDto>(fixtureDetailsJson);
+                        if (fixture != null)
+                        {
+                            fixtures.Add(fixture);
+                        }
+                    }
+                }
+
+                _logger.LogInformation("Successfully fetched all cached fixtures");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to fetch all cached fixtures");
+            }
+
+            return fixtures;
+        }
+
         public async Task InvalidateCacheAsync(string key)
         {
             try

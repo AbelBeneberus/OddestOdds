@@ -10,5 +10,6 @@ public interface ICacheRepository
     Task<FixtureDto?> GetCachedFixtureAsync(Guid fixtureId);
     Task<MarketDto?> GetCachedMarketAsync(Guid marketId);
     Task<MarketSelectionDto?> GetCachedMarketSelectionAsync(Guid selectionId);
+    Task<IEnumerable<FixtureDto>> GetAllCachedFixturesAsync();
     Task InvalidateCacheAsync(string key);
 }

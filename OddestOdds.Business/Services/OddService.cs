@@ -2,6 +2,7 @@
 using Microsoft.Extensions.Logging;
 using OddestOdds.Business.Factory;
 using OddestOdds.Caching.Repositories;
+using OddestOdds.Common.Dto;
 using OddestOdds.Common.Exceptions;
 using OddestOdds.Common.Extensions;
 using OddestOdds.Common.Models;
@@ -123,6 +124,19 @@ public class OddService : IOddService
         }
     }
 
+    public async Task<GetOddResponse> GetAllOddsAsync()
+    {
+        var fixtures = await _cacheRepository.GetAllCachedFixturesAsync();
+        return await GenerateGetOddResponse(fixtures);
+    }
+
+    public async Task<GetOddResponse> GetOddsByFixtureIds(IEnumerable<Guid> fixtureIds)
+    {
+        var fetchFixtureTasks = fixtureIds.Select(fixtureId => _cacheRepository.GetCachedFixtureAsync(fixtureId));
+        var fixtures = await Task.WhenAll(fetchFixtureTasks);
+        return await GenerateGetOddResponse(fixtures);
+    }
+
     private async Task ValidateRequest(CreateFixtureRequest request)
     {
         var validationResult = await _createFixtureRequestValidator.ValidateAsync(request);
@@ -164,5 +178,104 @@ public class OddService : IOddService
             MarketIds = fixture.Markets.Select(m => m.Id).ToArray(),
             MarketSelectionIds = fixture.Markets.SelectMany(ms => ms.Selections).Select(s => s.Id).ToArray()
         };
+    }
+
+    private async Task<GetOddResponse> GenerateGetOddResponse(IEnumerable<FixtureDto> fixtures)
+    {
+        // Convert fixtures to a dictionary for faster lookup
+        var fixtureDict = fixtures.ToDictionary(f => f.Id, f => f);
+
+        // Fetch and map markets
+        var markets = await FetchAndMapMarkets(fixtureDict);
+
+        // Fetch and map selections
+        var selections = await FetchAndMapSelections(markets);
+
+        var fixtureResponse = MapFixturesToResponse(fixtureDict, markets).ToList();
+        var marketResponse = MapMarketsToResponse(markets).ToList();
+        var selectionResponse = MapSelectionsToResponse(selections, fixtureDict).ToList();
+
+        return new GetOddResponse
+        {
+            Fixtures = fixtureResponse,
+            Markets = marketResponse,
+            Selections = selectionResponse,
+            TotalFixturesCount = fixtureResponse.Count(),
+            TotalMarketsCount = marketResponse.Count(),
+            TotalMarketSelectionsCount = selectionResponse.Count()
+        };
+    }
+
+    private async Task<Dictionary<Guid, MarketDto>> FetchAndMapMarkets(Dictionary<Guid, FixtureDto> fixtureDict)
+    {
+        var marketTasks = fixtureDict.Values
+            .SelectMany(f => f.MarketIds).Distinct()
+            .Select(m => _cacheRepository.GetCachedMarketAsync(m));
+
+        var marketList = await Task.WhenAll(marketTasks);
+
+        return marketList.ToDictionary(m => m.Id, m => m);
+    }
+
+    private async Task<Dictionary<Guid, MarketSelectionDto>> FetchAndMapSelections(
+        Dictionary<Guid, MarketDto> marketDict)
+    {
+        var selectionTasks = marketDict.Values.SelectMany(m => m.SelectionIds).Distinct()
+            .Select(s => _cacheRepository.GetCachedMarketSelectionAsync(s));
+        var selectionList = await Task.WhenAll(selectionTasks);
+        return selectionList.ToDictionary(s => s.Id, s => s);
+    }
+
+    private IEnumerable<GetOddResponse.FixtureResponse> MapFixturesToResponse(
+        Dictionary<Guid, FixtureDto> fixtureDict,
+        Dictionary<Guid, MarketDto> markets)
+    {
+        return fixtureDict.Values.Select(f =>
+        {
+            int totalSelections = f.MarketIds
+                .Where(markets.ContainsKey)
+                .Sum(marketId => markets[marketId].SelectionIds.Count);
+
+            return new GetOddResponse.FixtureResponse
+            {
+                FixtureId = f.Id,
+                FixtureName = f.FixtureName,
+                AwayTeam = f.AwayTeam,
+                HomeTeam = f.HomeTeam,
+                MarketsCount = f.MarketIds.Count,
+                MarketSelectionsCount = totalSelections
+            };
+        });
+    }
+
+    private IEnumerable<GetOddResponse.MarketResponse> MapMarketsToResponse(Dictionary<Guid, MarketDto> marketDict)
+    {
+        return marketDict.Values.Select(m => new GetOddResponse.MarketResponse
+        {
+            FixtureId = m.FixtureId,
+            MarketId = m.Id,
+            Name = m.Name,
+            SelectionCount = m.SelectionIds.Count
+        });
+    }
+
+    private IEnumerable<GetOddResponse.MarketSelectionResponse> MapSelectionsToResponse(
+        Dictionary<Guid, MarketSelectionDto> selectionDict,
+        Dictionary<Guid, FixtureDto> fixtureDict)
+    {
+        return selectionDict.Values.Select(s =>
+        {
+            var fixture = fixtureDict.Values.FirstOrDefault(f => f.MarketIds.Contains(s.MarketId));
+
+            return new GetOddResponse.MarketSelectionResponse
+            {
+                FixtureId = fixture?.Id ?? Guid.Empty,
+                MarketId = s.MarketId,
+                Name = s.Name,
+                OddValue = s.OddValue,
+                SelectionSide = s.Side,
+                SelectionId = s.Id
+            };
+        });
     }
 }

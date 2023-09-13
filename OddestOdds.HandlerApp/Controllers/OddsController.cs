@@ -71,4 +71,42 @@ public class OddsController : ControllerBase
             return StatusCode(500, "Internal server error occured while updating the odd.");
         }
     }
+
+    [HttpGet]
+    public async Task<IActionResult> GetOdds(Guid correlationId)
+    {
+        try
+        {
+            var result = await _oddService.GetAllOddsAsync();
+            _logger.LogInformation("Correlation Id : {CorrelationId} requested for getting all odds", correlationId);
+            return Ok(result);
+        }
+        catch (Exception e)
+        {
+            _logger.LogError(e, "Correlation Id : {CorrelationId} Error occured while trying to fetch all odds",
+                correlationId);
+            return StatusCode(500, $"Internal server error occured while trying to fetch all odds");
+        }
+    }
+
+    [HttpGet("{fixtureIds}")]
+    public async Task<IActionResult> GetOddsByFixtureIds(Guid correlationId, string fixtureIds)
+    {
+        var parsedFixtureIds = fixtureIds.Split(',').Select(s => Guid.Parse(s));
+        try
+        {
+            var result = await _oddService.GetOddsByFixtureIds(parsedFixtureIds);
+            _logger.LogInformation(
+                "Correlation Id : {CorrelationId} requested for getting odds for the following fixtureIds {fixtureIds}",
+                correlationId, fixtureIds);
+            return Ok(result);
+        }
+        catch (Exception e)
+        {
+            _logger.LogError(e,
+                "Correlation Id : {CorrelationId} Error occured while trying to fetch odds with fixtureId : {fixtureIds}",
+                correlationId, fixtureIds);
+            return StatusCode(500, $"Internal server error occured while trying to fetch odds.");
+        }
+    }
 }

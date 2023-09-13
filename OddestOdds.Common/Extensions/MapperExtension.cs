@@ -22,6 +22,7 @@ public static class MapperExtension
         return new MarketDto()
         {
             Id = market.Id,
+            FixtureId = market.FixtureId,
             Name = market.MarketName,
             SelectionIds = market.Selections.Select(s => s.Id).ToList()
         };
