@@ -16,4 +16,11 @@
 
 
 
+    <ItemGroup>
+      <Reference Include="OddestOdds.Common">
+        <HintPath>..\OddestOdds.UnitTest\bin\Debug\net6.0\OddestOdds.Common.dll</HintPath>
+      </Reference>
+    </ItemGroup>
+
+
 </Project>

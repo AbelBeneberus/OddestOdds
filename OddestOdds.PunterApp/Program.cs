@@ -67,13 +67,18 @@ public static class Program
         httpClientHandler.ServerCertificateCustomValidationCallback =
             HttpClientHandler.DangerousAcceptAnyServerCertificateValidator;
 
-        _hubConnection = new HubConnectionBuilder().WithUrl($"https://localhost:51641/messageHub",
+        _hubConnection = new HubConnectionBuilder().WithUrl($"{BaseUrl}messageHub",
                 options => { options.HttpMessageHandlerFactory = _ => httpClientHandler; })
             .WithAutomaticReconnect()
             .Build();
-        _hubConnection.On<OddUpdatedMessage>("ReceiveOddsUpdate", update => { Console.WriteLine(update.ToString()); });
+        _hubConnection.On<OddUpdatedMessage>("ReceiveOddsUpdate",
+            update => { Console.WriteLine(update.ToString()); });
 
-        _hubConnection.On<OddCreatedMessage>("ReceiveOddCreation", newOdd => { Console.WriteLine(newOdd.ToString()); });
+        _hubConnection.On<OddCreatedMessage>("ReceiveOddCreation",
+            newOdd => { Console.WriteLine(newOdd.ToString()); });
+
+        _hubConnection.On<OddDeletedMessage>("ReceiveOddDeleted",
+            deletedOdd => { Console.WriteLine(deletedOdd.ToString()); });
 
         await _hubConnection.StartAsync();
     }

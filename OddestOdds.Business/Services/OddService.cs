@@ -1,6 +1,8 @@
 ﻿using FluentValidation;
 using Microsoft.Extensions.Logging;
+using Newtonsoft.Json;
 using OddestOdds.Business.Factory;
+using OddestOdds.Caching.Helper;
 using OddestOdds.Caching.Repositories;
 using OddestOdds.Common.Dto;
 using OddestOdds.Common.Exceptions;
@@ -61,15 +63,16 @@ public class OddService : IOddService
 
     public async Task CreateOddAsync(CreateOddRequest request)
     {
-        _logger.LogInformation("Starting transaction for creating new market selection", request);
+        _logger.LogInformation("Starting transaction for creating new market selection with request: {@Request}",
+            JsonConvert.SerializeObject(request));
 
         var validationResult = await _createOddRequestValidator.ValidateAsync(request);
 
         if (!validationResult.IsValid)
         {
             _logger.LogError(
-                "Validation failed for create odd request",
-                new { Errors = validationResult.Errors, Request = request });
+                "Validation failed for create odd request {@Arg}",
+                new { validationResult.Errors, Request = JsonConvert.SerializeObject(request) });
 
             throw new ValidationException("Validation failed", validationResult.Errors);
         }
@@ -101,8 +104,8 @@ public class OddService : IOddService
 
             var message = new OddCreatedMessage()
             {
-                FixtureId = fixture.Id,
-                MarketId = market.Id,
+                FixtureId = fixture!.Id,
+                MarketId = market!.Id,
                 FixtureName = fixture.FixtureName,
                 Odd = marketSelection.Odd,
                 SelectionName = marketSelection.Name,
@@ -166,7 +169,50 @@ public class OddService : IOddService
     {
         var fetchFixtureTasks = fixtureIds.Select(fixtureId => _cacheRepository.GetCachedFixtureAsync(fixtureId));
         var fixtures = await Task.WhenAll(fetchFixtureTasks);
-        return await GenerateGetOddResponse(fixtures);
+        return await GenerateGetOddResponse(fixtures!);
+    }
+
+    public async Task DeleteOddAsync(Guid marketSelectionId)
+    {
+        try
+        {
+            // delete from the database first 
+            await _fixtureRepository.DeleteMarketSelectionAsync(marketSelectionId);
+
+            // Invalidate the market selection cache and publish message
+            var cachedSelection = await _cacheRepository.GetCachedMarketSelectionAsync(marketSelectionId);
+            if (cachedSelection == null)
+            {
+                return;
+            }
+
+            await _cacheRepository.InvalidateCacheAsync(RedisKeyConstants.MarketSelectionDetails(marketSelectionId));
+            var oddDeletedMessage = new OddDeletedMessage()
+            {
+                Type = "OddDeleted",
+                MarketSelectionId = marketSelectionId
+            };
+
+            // Update market cache to remove the deleted market selection from Id list.
+            await _messagePublisherService.PublishMessageAsync(oddDeletedMessage);
+            var cachedMarket = await _cacheRepository.GetCachedMarketAsync(cachedSelection.MarketId);
+            if (cachedMarket == null)
+            {
+                return;
+            }
+
+            cachedMarket.SelectionIds.Remove(marketSelectionId);
+            await _cacheRepository.CacheMarketAsync(cachedMarket);
+        }
+        catch (MarketSelectionNotFoundException)
+        {
+            throw;
+        }
+        catch (Exception e)
+        {
+            _logger.LogError(e, "Unhandled exception occured while deleting odd");
+            throw;
+        }
     }
 
     private async Task ValidateRequest(CreateFixtureRequest request)
@@ -174,8 +220,8 @@ public class OddService : IOddService
         var validationResult = await _createFixtureRequestValidator.ValidateAsync(request);
         if (!validationResult.IsValid)
         {
-            _logger.LogError("Validation failed for create fixture request",
-                new { Errors = validationResult.Errors, Request = request });
+            _logger.LogError("Validation failed for create fixture request : {@Arg}",
+                new { validationResult.Errors, Request = JsonConvert.SerializeObject(request) });
             throw new ValidationException("Validation failed", validationResult.Errors);
         }
     }
@@ -192,7 +238,8 @@ public class OddService : IOddService
 
     private async Task<FixtureCreatedResponse> CacheAndRespond(Fixture fixture)
     {
-        _logger.LogInformation("Caching new fixture, markets, and market selections", fixture);
+        _logger.LogInformation("Caching new fixture, markets, and market selections {@Fixture}",
+            JsonConvert.SerializeObject(fixture));
 
         var cacheFixtureTask = _cacheRepository.CacheFixtureAsync(fixture.ToDto());
         var cacheMarketTasks = fixture.Markets.Select(m => _cacheRepository.CacheMarketAsync(m.ToDto()));

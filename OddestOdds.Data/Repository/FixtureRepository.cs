@@ -1,5 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using OddestOdds.Common.Exceptions;
 using OddestOdds.Data.Database;
 using OddestOdds.Data.Models;
 
@@ -38,5 +39,18 @@ public class FixtureRepository : IFixtureRepository
     public Task<MarketSelection> GetMarketSelectionAsync(Guid marketSelectionId)
     {
         return _dbContext.MarketSelections.FirstOrDefaultAsync(ms => ms.Id == marketSelectionId)!;
+    }
+
+    public async Task DeleteMarketSelectionAsync(Guid marketSelectionId)
+    {
+        var marketSelection = await _dbContext.MarketSelections.FindAsync(marketSelectionId);
+        if (marketSelection == null)
+        {
+            throw new MarketSelectionNotFoundException($"MarketSelection not found with id {marketSelectionId}",
+                marketSelectionId);
+        }
+
+        _dbContext.MarketSelections.Remove(marketSelection);
+        await _dbContext.SaveChangesAsync();
     }
 }

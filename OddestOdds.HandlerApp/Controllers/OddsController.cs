@@ -1,5 +1,6 @@
 ﻿using FluentValidation;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.JSInterop;
 using OddestOdds.Business.Services;
 using OddestOdds.Common.Exceptions;
 using OddestOdds.Common.Extensions;
@@ -109,6 +110,31 @@ public class OddsController : ControllerBase
                 "Correlation Id : {CorrelationId} Error occured while trying to fetch odds with fixtureId : {fixtureIds}",
                 correlationId, fixtureIds);
             return StatusCode(500, $"Internal server error occured while trying to fetch odds.");
+        }
+    }
+
+    [HttpDelete]
+    public async Task<IActionResult> DeleteOdd(Guid correlationId, Guid marketSelectionId)
+    {
+        try
+        {
+            await _oddService.DeleteOddAsync(marketSelectionId);
+            _logger.LogInformation(
+                "Correlation Id : {CorrelationId} requested for deleting odd for the following marketSelectionId {marketSelectionId}",
+                correlationId, marketSelectionId);
+            return Ok();
+        }
+        catch (MarketSelectionNotFoundException exception)
+        {
+            return NotFound(new
+            {
+                Message = $"Market selection can not be found for MarketSelectionId: {exception.SelectionId}"
+            });
+        }
+        catch (Exception e)
+        {
+            _logger.LogError(e, "Internal server error occured while trying to delete market selection");
+            return StatusCode(500, "Internal Server Error Occured");
         }
     }
 }

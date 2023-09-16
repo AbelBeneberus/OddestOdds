@@ -8,4 +8,5 @@ public interface IFixtureRepository
     Task CreateMarketSelectionAsync(MarketSelection selection);
     Task UpdateMarketSelectionAsync(MarketSelection selection);
     Task<MarketSelection> GetMarketSelectionAsync(Guid marketSelectionId);
+    Task DeleteMarketSelectionAsync(Guid marketSelectionId); 
 }
