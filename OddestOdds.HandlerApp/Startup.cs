@@ -91,6 +91,7 @@ public class Startup
                     await context.Response.WriteAsync(result);
                 }
             });
+            endpoints.MapHub<MessageHub>("/messageHub");
         });
     }
 

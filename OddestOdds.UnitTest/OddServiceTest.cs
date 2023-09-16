@@ -5,10 +5,13 @@ using Microsoft.Extensions.Logging;
 using Moq;
 using OddestOdds.Business.Services;
 using OddestOdds.Caching.Repositories;
+using OddestOdds.Common.Dto;
+using OddestOdds.Common.Messages;
 using OddestOdds.Common.Models;
 using OddestOdds.Data.Enums;
 using OddestOdds.Data.Models;
 using OddestOdds.Data.Repository;
+using OddestOdds.Messaging.Services;
 using Xunit;
 
 namespace OddestOdds.UnitTest;
@@ -18,17 +21,20 @@ public class OddServiceTests
     [Fact]
     public async Task CreateFixtureAsync_ShouldReturnFixtureCreatedResponse()
     {
+        // Arrange
         var fixtureRepoMock = new Mock<IFixtureRepository>();
         var cacheRepoMock = new Mock<ICacheRepository>();
         var loggerMock = new Mock<ILogger<OddService>>();
         var createFixtureRequestValidatorMock = new Mock<IValidator<CreateFixtureRequest>>();
         var createOddRequestValidatorMock = new Mock<IValidator<CreateOddRequest>>();
+        var messagePublisherMock = new Mock<IMessagePublisherService>();
 
         var service = new OddService(fixtureRepoMock.Object,
             cacheRepoMock.Object,
             loggerMock.Object,
             createFixtureRequestValidatorMock.Object,
-            createOddRequestValidatorMock.Object);
+            createOddRequestValidatorMock.Object,
+            messagePublisherMock.Object);
 
         var request = new CreateFixtureRequest
         {
@@ -74,11 +80,66 @@ public class OddServiceTests
         createFixtureRequestValidatorMock.Setup(v => v.ValidateAsync(request, new CancellationToken()))
             .ReturnsAsync(new ValidationResult());
 
+        // Act
         var response = await service.CreateFixtureAsync(request);
 
+        // Assert
         response.Should().BeOfType<FixtureCreatedResponse>();
         response.FixtureId.Should().Be(fixture.Id);
         response.MarketIds.Length.Should().Be(1);
         response.MarketSelectionIds.Length.Should().Be(2);
+    }
+
+    [Fact]
+    public async Task CreateOddAsync_ShouldPublishMessage()
+    {
+        // Arrange
+        var fixtureRepoMock = new Mock<IFixtureRepository>();
+        var cacheRepoMock = new Mock<ICacheRepository>();
+        var loggerMock = new Mock<ILogger<OddService>>();
+        var createFixtureRequestValidatorMock = new Mock<IValidator<CreateFixtureRequest>>();
+        var createOddRequestValidatorMock = new Mock<IValidator<CreateOddRequest>>();
+        var messagePublisherMock = new Mock<IMessagePublisherService>();
+
+        var service = new OddService(fixtureRepoMock.Object,
+            cacheRepoMock.Object,
+            loggerMock.Object,
+            createFixtureRequestValidatorMock.Object,
+            createOddRequestValidatorMock.Object,
+            messagePublisherMock.Object);
+
+        var createOddRequest = new CreateOddRequest()
+        {
+            FixtureId = Guid.NewGuid(),
+            SelectionName = "Test Selection",
+            OddValue = 4,
+            MarketId = Guid.NewGuid(),
+            Side = MarketSelectionSide.Away
+        };
+
+        createOddRequestValidatorMock.Setup(v => v.ValidateAsync(createOddRequest, CancellationToken.None))
+            .ReturnsAsync(new ValidationResult());
+
+        cacheRepoMock.Setup(c => c.GetCachedMarketAsync(It.IsAny<Guid>()))
+            .ReturnsAsync(new MarketDto()
+            {
+                FixtureId = createOddRequest.FixtureId,
+                Name = "Test Market",
+                Id = createOddRequest.MarketId
+            });
+        cacheRepoMock.Setup(c => c.GetCachedFixtureAsync(It.IsAny<Guid>())).ReturnsAsync(new FixtureDto()
+        {
+            AwayTeam = "A team",
+            HomeTeam = "H team",
+            FixtureName = "Test fixture",
+            MarketIds = new List<Guid>() { createOddRequest.MarketId },
+            Id = createOddRequest.FixtureId
+        });
+
+        // Act
+        await service.CreateOddAsync(createOddRequest);
+
+        // Assert
+        messagePublisherMock.Verify(pub => pub.PublishMessageAsync(It.IsAny<Message>()), Times.Once);
     }
 }

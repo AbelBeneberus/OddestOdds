@@ -5,9 +5,11 @@ using OddestOdds.Caching.Repositories;
 using OddestOdds.Common.Dto;
 using OddestOdds.Common.Exceptions;
 using OddestOdds.Common.Extensions;
+using OddestOdds.Common.Messages;
 using OddestOdds.Common.Models;
 using OddestOdds.Data.Models;
 using OddestOdds.Data.Repository;
+using OddestOdds.Messaging.Services;
 
 namespace OddestOdds.Business.Services;
 
@@ -18,13 +20,15 @@ public class OddService : IOddService
     private readonly ILogger<OddService> _logger;
     private readonly IValidator<CreateFixtureRequest> _createFixtureRequestValidator;
     private readonly IValidator<CreateOddRequest> _createOddRequestValidator;
+    private readonly IMessagePublisherService _messagePublisherService;
 
     public OddService(
         IFixtureRepository fixtureRepository,
         ICacheRepository cacheRepository,
         ILogger<OddService> logger,
         IValidator<CreateFixtureRequest> createFixtureRequestValidator,
-        IValidator<CreateOddRequest> createOddRequestValidator)
+        IValidator<CreateOddRequest> createOddRequestValidator,
+        IMessagePublisherService messagePublisherService)
     {
         _fixtureRepository = fixtureRepository ?? throw new ArgumentNullException(nameof(fixtureRepository));
         _cacheRepository = cacheRepository ?? throw new ArgumentNullException(nameof(cacheRepository));
@@ -33,6 +37,8 @@ public class OddService : IOddService
                                          throw new ArgumentNullException(nameof(createFixtureRequestValidator));
         _createOddRequestValidator = createOddRequestValidator ??
                                      throw new ArgumentNullException(nameof(createOddRequestValidator));
+        _messagePublisherService =
+            messagePublisherService ?? throw new ArgumentNullException(nameof(messagePublisherService));
     }
 
     public async Task<FixtureCreatedResponse> CreateFixtureAsync(CreateFixtureRequest request)
@@ -89,6 +95,24 @@ public class OddService : IOddService
             }
 
             await _cacheRepository.CacheMarketSelectionAsync(marketSelection.ToDto());
+
+            var fixture = await _cacheRepository.GetCachedFixtureAsync(request.FixtureId);
+            var market = await _cacheRepository.GetCachedMarketAsync(request.MarketId);
+
+            var message = new OddCreatedMessage()
+            {
+                FixtureId = fixture.Id,
+                MarketId = market.Id,
+                FixtureName = fixture.FixtureName,
+                Odd = marketSelection.Odd,
+                SelectionName = marketSelection.Name,
+                MarketSelectionId = marketSelection.Id,
+                Type = "OddCreated",
+                MarketName = market.Name,
+                AwayTeam = fixture.AwayTeam,
+                HomeTeam = fixture.HomeTeam
+            };
+            await _messagePublisherService.PublishMessageAsync(message);
         }
         catch (Exception ex)
         {
@@ -110,6 +134,14 @@ public class OddService : IOddService
             selection.Odd = request.NewOddValue;
             await _fixtureRepository.UpdateMarketSelectionAsync(selection);
             await _cacheRepository.CacheMarketSelectionAsync(selection.ToDto());
+
+            var message = new OddUpdatedMessage()
+            {
+                Type = "OddUpdated",
+                MarketSelectionId = selection.Id,
+                NewOddValue = request.NewOddValue
+            };
+            await _messagePublisherService.PublishMessageAsync(message);
         }
         catch (MarketSelectionNotFoundException exception)
         {

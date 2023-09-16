@@ -12,17 +12,20 @@ namespace OddestOdds.Messaging.Services;
 public class RabbitMqConsumer : BackgroundService
 {
     private readonly IModel _model;
-    private readonly IRealTimeUpdateService<OddUpdatedMessage> _realTimeUpdateService;
+    private readonly IRealTimeUpdateService<OddCreatedMessage> _oddCreatedHandler;
+    private readonly IRealTimeUpdateService<OddUpdatedMessage> _oddUpdatedHandler;
     private readonly ILogger<RabbitMqConsumer> _logger;
 
     private readonly string _queueName = "odd_manager";
 
     public RabbitMqConsumer(IConnection connection,
-        IRealTimeUpdateService<OddUpdatedMessage> realTimeUpdateService,
-        ILogger<RabbitMqConsumer> logger)
+        ILogger<RabbitMqConsumer> logger,
+        IRealTimeUpdateService<OddUpdatedMessage> oddUpdatedHandler,
+        IRealTimeUpdateService<OddCreatedMessage> oddCreatedHandler)
     {
-        _realTimeUpdateService = realTimeUpdateService;
         _logger = logger;
+        _oddUpdatedHandler = oddUpdatedHandler;
+        _oddCreatedHandler = oddCreatedHandler;
         _model = connection.CreateModel();
     }
 
@@ -34,9 +37,19 @@ public class RabbitMqConsumer : BackgroundService
         {
             var body = ea.Body.ToArray();
             var message = Encoding.UTF8.GetString(body);
+            var messageType = ea.BasicProperties.Type;
 
-            var oddUpdatedMessage = JsonConvert.DeserializeObject<OddUpdatedMessage>(message);
-            await _realTimeUpdateService.SendOddsUpdateAsync(oddUpdatedMessage);
+            switch (messageType)
+            {
+                case "OddCreated":
+                    var oddCreatedMessage = JsonConvert.DeserializeObject<OddCreatedMessage>(message);
+                    await _oddCreatedHandler.HandleMessageAsync(oddCreatedMessage);
+                    break;
+                case "OddUpdated":
+                    var oddUpdatedMessage = JsonConvert.DeserializeObject<OddUpdatedMessage>(message);
+                    await _oddUpdatedHandler.HandleMessageAsync(oddUpdatedMessage);
+                    break;
+            }
         };
         _model.QueueDeclare(queue: _queueName, durable: true, exclusive: false, autoDelete: false,
             arguments: null);
