@@ -4,8 +4,10 @@ using FluentValidation.Results;
 using Microsoft.Extensions.Logging;
 using Moq;
 using OddestOdds.Business.Services;
+using OddestOdds.Caching.Helper;
 using OddestOdds.Caching.Repositories;
 using OddestOdds.Common.Dto;
+using OddestOdds.Common.Extensions;
 using OddestOdds.Common.Messages;
 using OddestOdds.Common.Models;
 using OddestOdds.Data.Enums;
@@ -141,5 +143,62 @@ public class OddServiceTests
 
         // Assert
         messagePublisherMock.Verify(pub => pub.PublishMessageAsync(It.IsAny<Message>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task DeleteOddAsync_ShouldHaveToDeleteInvalidateCacheAndPublishDeletedMessage()
+    {
+        // Arrange
+        var fixtureRepoMock = new Mock<IFixtureRepository>();
+        var cacheRepoMock = new Mock<ICacheRepository>();
+        var loggerMock = new Mock<ILogger<OddService>>();
+        var createFixtureRequestValidatorMock = new Mock<IValidator<CreateFixtureRequest>>();
+        var createOddRequestValidatorMock = new Mock<IValidator<CreateOddRequest>>();
+        var messagePublisherMock = new Mock<IMessagePublisherService>();
+
+        var service = new OddService(fixtureRepoMock.Object,
+            cacheRepoMock.Object,
+            loggerMock.Object,
+            createFixtureRequestValidatorMock.Object,
+            createOddRequestValidatorMock.Object,
+            messagePublisherMock.Object);
+
+        fixtureRepoMock.Setup(f => f.DeleteMarketSelectionAsync(It.IsAny<Guid>())).Returns(Task.CompletedTask);
+
+        var marketSelection = new MarketSelection()
+        {
+            MarketId = Guid.NewGuid(),
+            Side = MarketSelectionSide.Away,
+            Name = "Test X",
+            Id = Guid.NewGuid(),
+            Odd = 1
+        };
+
+        var marketDto = new MarketDto()
+        {
+            FixtureId = Guid.NewGuid(),
+            Id = marketSelection.MarketId,
+            Name = "Test Markets",
+            SelectionIds = new List<Guid>()
+            {
+                marketSelection.Id
+            }
+        };
+
+        cacheRepoMock.Setup(c => c.GetCachedMarketSelectionAsync(It.IsAny<Guid>()))
+            .ReturnsAsync(marketSelection.ToDto());
+        cacheRepoMock.Setup(c => c.GetCachedMarketAsync(It.IsAny<Guid>())).ReturnsAsync(marketDto);
+
+        // Act
+        await service.DeleteOddAsync(marketSelection.Id);
+
+        // Assert 
+        cacheRepoMock.Verify(c => c.CacheMarketAsync(It.Is<MarketDto>(m => m.SelectionIds.Count == 0)),
+            Times.Once());
+        cacheRepoMock.Verify(c => c.InvalidateCacheAsync(RedisKeyConstants.MarketSelectionDetails(marketSelection.Id)),
+            Times.Once);
+        messagePublisherMock.Verify(m => m.PublishMessageAsync(It.IsAny<OddDeletedMessage>()),
+            Times.Once());
+        fixtureRepoMock.Verify(f => f.DeleteMarketSelectionAsync(marketSelection.Id), Times.Once);
     }
 }
