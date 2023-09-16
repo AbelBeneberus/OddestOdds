@@ -3,7 +3,8 @@ using OddestOdds.Common.Messages;
 
 namespace OddestOdds.RealTime.Services;
 
-public class RealTimeUpdateService : IRealTimeUpdateService<OddUpdatedMessage>
+public class RealTimeUpdateService : IRealTimeUpdateService<OddUpdatedMessage>,
+    IRealTimeUpdateService<OddCreatedMessage>
 {
     private readonly IHubContext<MessageHub> _hubContext;
     private readonly ILogger<RealTimeUpdateService> _logger;
@@ -14,8 +15,13 @@ public class RealTimeUpdateService : IRealTimeUpdateService<OddUpdatedMessage>
         _logger = logger;
     }
 
-    public async Task SendOddsUpdateAsync(OddUpdatedMessage message)
+    public async Task HandleMessageAsync(OddUpdatedMessage message)
     {
         await _hubContext.Clients.All.SendAsync("ReceiveOddsUpdate", message);
+    }
+
+    public async Task HandleMessageAsync(OddCreatedMessage message)
+    {
+        await _hubContext.Clients.All.SendAsync("ReceiveOddCreation", message);
     }
 }

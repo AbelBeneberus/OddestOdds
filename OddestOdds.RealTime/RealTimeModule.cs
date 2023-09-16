@@ -9,6 +9,7 @@ public static class RealTimeModule
     {
         services.AddSignalR();
         services.AddSingleton<IRealTimeUpdateService<OddUpdatedMessage>, RealTimeUpdateService>();
+        services.AddSingleton<IRealTimeUpdateService<OddCreatedMessage>, RealTimeUpdateService>();
         return services;
     }
 }

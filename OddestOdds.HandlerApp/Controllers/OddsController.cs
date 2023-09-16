@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Mvc;
 using OddestOdds.Business.Services;
 using OddestOdds.Common.Exceptions;
+using OddestOdds.Common.Extensions;
 using OddestOdds.Common.Models;
 
 namespace OddestOdds.HandlerApp.Controllers;
@@ -73,13 +74,14 @@ public class OddsController : ControllerBase
     }
 
     [HttpGet]
-    public async Task<IActionResult> GetOdds(Guid correlationId)
+    public async Task<IActionResult> GetOdds(Guid correlationId, bool asTree)
     {
         try
         {
             var result = await _oddService.GetAllOddsAsync();
             _logger.LogInformation("Correlation Id : {CorrelationId} requested for getting all odds", correlationId);
-            return Ok(result);
+
+            return Ok(asTree ? result.ToTreeStructure() : result);
         }
         catch (Exception e)
         {

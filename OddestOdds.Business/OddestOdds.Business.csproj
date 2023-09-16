@@ -11,6 +11,7 @@
     <ProjectReference Include="..\OddestOdds.Caching\OddestOdds.Caching.csproj" />
     <ProjectReference Include="..\OddestOdds.Common\OddestOdds.Common.csproj" />
     <ProjectReference Include="..\OddestOdds.Data\OddestOdds.Data.csproj" />
+    <ProjectReference Include="..\OddestOdds.Messaging\OddestOdds.Messaging.csproj" />
   </ItemGroup>
 
 
