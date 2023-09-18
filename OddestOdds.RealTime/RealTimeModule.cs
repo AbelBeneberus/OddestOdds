@@ -11,6 +11,7 @@ public static class RealTimeModule
         services.AddSingleton<IRealTimeUpdateService<OddUpdatedMessage>, RealTimeUpdateService>();
         services.AddSingleton<IRealTimeUpdateService<OddCreatedMessage>, RealTimeUpdateService>();
         services.AddSingleton<IRealTimeUpdateService<OddDeletedMessage>, RealTimeUpdateService>(); 
+        services.AddSingleton<IRealTimeUpdateService<PushedOddMessage>, RealTimeUpdateService>(); 
         return services;
     }
 }

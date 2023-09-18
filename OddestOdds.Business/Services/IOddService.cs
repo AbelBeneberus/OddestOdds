@@ -8,6 +8,7 @@ public interface IOddService
     Task CreateOddAsync(CreateOddRequest request);
     Task UpdateOddAsync(UpdateOddRequest request);
     Task<GetOddResponse> GetAllOddsAsync();
-    Task<GetOddResponse> GetOddsByFixtureIds(IEnumerable<Guid> fixtureIds);
-    Task DeleteOddAsync(Guid marketSelectionId); 
+    Task<GetOddResponse> GetOddsByFixtureIdsAsync(IEnumerable<Guid> fixtureIds);
+    Task DeleteOddAsync(Guid marketSelectionId);
+    Task PushOddAsync(PushOddsRequest request); 
 }

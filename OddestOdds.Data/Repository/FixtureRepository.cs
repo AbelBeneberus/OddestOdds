@@ -1,7 +1,7 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
-using OddestOdds.Common.Exceptions;
 using OddestOdds.Data.Database;
+using OddestOdds.Data.Exceptions;
 using OddestOdds.Data.Models;
 
 namespace OddestOdds.Data.Repository;

@@ -1,4 +1,4 @@
-﻿namespace OddestOdds.Common.Exceptions;
+﻿namespace OddestOdds.Data.Exceptions;
 
 public class MarketSelectionNotFoundException : Exception
 {

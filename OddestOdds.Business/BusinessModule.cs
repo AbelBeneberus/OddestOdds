@@ -13,6 +13,7 @@ public static class BusinessModule
         services.AddScoped<IOddService, OddService>();
         services.AddTransient<IValidator<CreateOddRequest>, CreateOddRequestValidator>();
         services.AddTransient<IValidator<CreateFixtureRequest>, CreateFixtureRequestValidator>();
+        services.AddTransient<IValidator<PushOddsRequest>, PushOddsRequestValidator>();
         return services;
     }
 }
