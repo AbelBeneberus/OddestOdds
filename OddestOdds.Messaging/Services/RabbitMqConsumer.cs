@@ -15,6 +15,7 @@ public class RabbitMqConsumer : BackgroundService
     private readonly IRealTimeUpdateService<OddCreatedMessage> _oddCreatedHandler;
     private readonly IRealTimeUpdateService<OddUpdatedMessage> _oddUpdatedHandler;
     private readonly IRealTimeUpdateService<OddDeletedMessage> _oddDeletedHandler;
+    private readonly IRealTimeUpdateService<PushedOddMessage> _oddPushedHandler;
     private readonly ILogger<RabbitMqConsumer> _logger;
 
     private readonly string _queueName = "odd_manager";
@@ -23,12 +24,14 @@ public class RabbitMqConsumer : BackgroundService
         ILogger<RabbitMqConsumer> logger,
         IRealTimeUpdateService<OddUpdatedMessage> oddUpdatedHandler,
         IRealTimeUpdateService<OddCreatedMessage> oddCreatedHandler,
-        IRealTimeUpdateService<OddDeletedMessage> oddDeletedHandler)
+        IRealTimeUpdateService<OddDeletedMessage> oddDeletedHandler,
+        IRealTimeUpdateService<PushedOddMessage> oddPushedHandler)
     {
         _logger = logger;
         _oddUpdatedHandler = oddUpdatedHandler;
         _oddCreatedHandler = oddCreatedHandler;
         _oddDeletedHandler = oddDeletedHandler;
+        _oddPushedHandler = oddPushedHandler;
         _model = connection.CreateModel();
     }
 
@@ -55,6 +58,10 @@ public class RabbitMqConsumer : BackgroundService
                 case "OddDeleted":
                     var oddDeletedMessage = JsonConvert.DeserializeObject<OddDeletedMessage>(message);
                     await _oddDeletedHandler.HandleMessageAsync(oddDeletedMessage);
+                    break;
+                case "PushedOdd":
+                    var pushedOdd = JsonConvert.DeserializeObject<PushedOddMessage>(message);
+                    await _oddPushedHandler.HandleMessageAsync(pushedOdd);
                     break;
             }
         };

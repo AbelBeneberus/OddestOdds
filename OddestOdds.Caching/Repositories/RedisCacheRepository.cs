@@ -136,41 +136,42 @@ namespace OddestOdds.Caching.Repositories
             }
         }
 
-        public async Task<IEnumerable<FixtureDto>> GetAllCachedFixturesAsync()
+        public async Task<IEnumerable<T>> GetAllCachedItemsAsync<T>(string redisKeyPattern)
         {
-            var fixtures = new List<FixtureDto>();
+            var items = new List<T>();
             try
             {
                 var keys = new List<RedisKey>();
                 var endpoints = _database.Multiplexer.GetEndPoints();
+
                 foreach (var endpoint in endpoints)
                 {
                     var server = _database.Multiplexer.GetServer(endpoint);
-                    var dbKeys = server.Keys(pattern: "fixture:*");
+                    var dbKeys = server.Keys(pattern: redisKeyPattern);
                     keys.AddRange(dbKeys);
                 }
 
                 foreach (var key in keys)
                 {
-                    var fixtureDetailsJson = await _database.StringGetAsync(key);
-                    if (!fixtureDetailsJson.IsNullOrEmpty)
+                    var itemDetailsJson = await _database.StringGetAsync(key);
+                    if (!itemDetailsJson.IsNullOrEmpty)
                     {
-                        var fixture = JsonConvert.DeserializeObject<FixtureDto>(fixtureDetailsJson);
-                        if (fixture != null)
+                        var item = JsonConvert.DeserializeObject<T>(itemDetailsJson);
+                        if (item != null)
                         {
-                            fixtures.Add(fixture);
+                            items.Add(item);
                         }
                     }
                 }
 
-                _logger.LogInformation("Successfully fetched all cached fixtures");
+                _logger.LogInformation($"Successfully fetched all cached items of type {typeof(T).Name}");
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Failed to fetch all cached fixtures");
+                _logger.LogError(ex, $"Failed to fetch all cached items of type {typeof(T).Name}");
             }
 
-            return fixtures;
+            return items;
         }
 
         public async Task InvalidateCacheAsync(string key)

@@ -59,7 +59,6 @@ public static class Program
         }
     }
 
-
     private static async Task SetupRealtimeUpdateReceiver()
     {
         var httpClientHandler = new HttpClientHandler();
@@ -79,6 +78,9 @@ public static class Program
 
         _hubConnection.On<OddDeletedMessage>("ReceiveOddDeleted",
             deletedOdd => { Console.WriteLine(deletedOdd.ToString()); });
+
+        _hubConnection.On<PushedOddMessage>("ReceiveOddPushed",
+            pushedOdd => { Console.WriteLine(pushedOdd.ToString()); });
 
         await _hubConnection.StartAsync();
     }

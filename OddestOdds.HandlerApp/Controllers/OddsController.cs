@@ -2,9 +2,9 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.JSInterop;
 using OddestOdds.Business.Services;
-using OddestOdds.Common.Exceptions;
 using OddestOdds.Common.Extensions;
 using OddestOdds.Common.Models;
+using OddestOdds.Data.Exceptions;
 
 namespace OddestOdds.HandlerApp.Controllers;
 
@@ -43,6 +43,31 @@ public class OddsController : ControllerBase
         {
             _logger.LogError("Unhandled Exception", e);
             return StatusCode(500, "Internal server error occured while creating odds");
+        }
+    }
+
+    [HttpPost("pushOdds")]
+    public async Task<IActionResult> PushOdds([FromBody] PushOddsRequest request)
+    {
+        try
+        {
+            await _oddService.PushOddAsync(request);
+            return Ok();
+        }
+        catch (ValidationException exception)
+        {
+            _logger.LogError("Validation Failed", exception);
+            var errorMessages = exception.Errors.Select(e => e.ErrorMessage).ToList();
+            return BadRequest(new
+            {
+                Message = "Validation Failed",
+                errors = errorMessages
+            });
+        }
+        catch (Exception e)
+        {
+            _logger.LogError("Unhandled Exception", e);
+            return StatusCode(500, "Internal server error occured while pushing odds");
         }
     }
 
@@ -98,7 +123,7 @@ public class OddsController : ControllerBase
         var parsedFixtureIds = fixtureIds.Split(',').Select(s => Guid.Parse(s));
         try
         {
-            var result = await _oddService.GetOddsByFixtureIds(parsedFixtureIds);
+            var result = await _oddService.GetOddsByFixtureIdsAsync(parsedFixtureIds);
             _logger.LogInformation(
                 "Correlation Id : {CorrelationId} requested for getting odds for the following fixtureIds {fixtureIds}",
                 correlationId, fixtureIds);

@@ -5,10 +5,10 @@ using OddestOdds.Business.Factory;
 using OddestOdds.Caching.Helper;
 using OddestOdds.Caching.Repositories;
 using OddestOdds.Common.Dto;
-using OddestOdds.Common.Exceptions;
 using OddestOdds.Common.Extensions;
 using OddestOdds.Common.Messages;
 using OddestOdds.Common.Models;
+using OddestOdds.Data.Exceptions;
 using OddestOdds.Data.Models;
 using OddestOdds.Data.Repository;
 using OddestOdds.Messaging.Services;
@@ -22,7 +22,9 @@ public class OddService : IOddService
     private readonly ILogger<OddService> _logger;
     private readonly IValidator<CreateFixtureRequest> _createFixtureRequestValidator;
     private readonly IValidator<CreateOddRequest> _createOddRequestValidator;
+    private readonly IValidator<PushOddsRequest> _pushOddRequestValidator;
     private readonly IMessagePublisherService _messagePublisherService;
+
 
     public OddService(
         IFixtureRepository fixtureRepository,
@@ -30,6 +32,7 @@ public class OddService : IOddService
         ILogger<OddService> logger,
         IValidator<CreateFixtureRequest> createFixtureRequestValidator,
         IValidator<CreateOddRequest> createOddRequestValidator,
+        IValidator<PushOddsRequest> pushOddRequestValidator,
         IMessagePublisherService messagePublisherService)
     {
         _fixtureRepository = fixtureRepository ?? throw new ArgumentNullException(nameof(fixtureRepository));
@@ -39,6 +42,8 @@ public class OddService : IOddService
                                          throw new ArgumentNullException(nameof(createFixtureRequestValidator));
         _createOddRequestValidator = createOddRequestValidator ??
                                      throw new ArgumentNullException(nameof(createOddRequestValidator));
+        _pushOddRequestValidator =
+            pushOddRequestValidator ?? throw new ArgumentNullException(nameof(pushOddRequestValidator));
         _messagePublisherService =
             messagePublisherService ?? throw new ArgumentNullException(nameof(messagePublisherService));
     }
@@ -161,11 +166,11 @@ public class OddService : IOddService
 
     public async Task<GetOddResponse> GetAllOddsAsync()
     {
-        var fixtures = await _cacheRepository.GetAllCachedFixturesAsync();
+        var fixtures = await _cacheRepository.GetAllCachedItemsAsync<FixtureDto>("fixture:*");
         return await GenerateGetOddResponse(fixtures);
     }
 
-    public async Task<GetOddResponse> GetOddsByFixtureIds(IEnumerable<Guid> fixtureIds)
+    public async Task<GetOddResponse> GetOddsByFixtureIdsAsync(IEnumerable<Guid> fixtureIds)
     {
         var fetchFixtureTasks = fixtureIds.Select(fixtureId => _cacheRepository.GetCachedFixtureAsync(fixtureId));
         var fixtures = await Task.WhenAll(fetchFixtureTasks);
@@ -213,6 +218,73 @@ public class OddService : IOddService
             _logger.LogError(e, "Unhandled exception occured while deleting odd");
             throw;
         }
+    }
+
+    public async Task PushOddAsync(PushOddsRequest request)
+    {
+        var validationResult = await _pushOddRequestValidator.ValidateAsync(request);
+
+        if (!validationResult.IsValid)
+        {
+            _logger.LogError(
+                "Validation failed for pushing odds {@Arg}",
+                new { validationResult.Errors, Request = JsonConvert.SerializeObject(request) });
+
+            throw new ValidationException("Validation failed", validationResult.Errors);
+        }
+
+        IEnumerable<MarketSelectionDto> fetchedSelections;
+        IEnumerable<MarketDto> fetchedMarkets;
+        IEnumerable<FixtureDto> fetchedFixtures;
+
+        if (request.PushAll)
+        {
+            fetchedFixtures = await _cacheRepository.GetAllCachedItemsAsync<FixtureDto>("fixture:*");
+            fetchedMarkets = await _cacheRepository.GetAllCachedItemsAsync<MarketDto>("market:*");
+            fetchedSelections =
+                await _cacheRepository.GetAllCachedItemsAsync<MarketSelectionDto>("selection:*");
+        }
+        else
+        {
+            // Fetch only the specified selections, markets, and fixtures
+            var getSelectionsTask =
+                request.MarketSelectionIds.Select(id => _cacheRepository.GetCachedMarketSelectionAsync(id));
+            fetchedSelections = (await Task.WhenAll(getSelectionsTask))!;
+
+            var getMarketsTask = fetchedSelections.GroupBy(s => s.MarketId)
+                .Select(group => _cacheRepository.GetCachedMarketAsync(group.First().MarketId));
+            fetchedMarkets = (await Task.WhenAll(getMarketsTask))!;
+
+            var getFixturesTask = fetchedMarkets.GroupBy(m => m.FixtureId)
+                .Select(group => _cacheRepository.GetCachedFixtureAsync(group.First().FixtureId));
+            fetchedFixtures = (await Task.WhenAll(getFixturesTask))!;
+        }
+
+        var publishMessageTasks = new List<Task>();
+
+        foreach (var selection in fetchedSelections)
+        {
+            var correspondingMarket = fetchedMarkets.First(m => m.Id == selection.MarketId);
+            var correspondingFixture = fetchedFixtures.First(f => f.Id == correspondingMarket.FixtureId);
+
+            PushedOddMessage message = new PushedOddMessage
+            {
+                Id = selection.Id,
+                FixtureId = correspondingFixture.Id,
+                MarketId = correspondingMarket.Id,
+                HomeTeam = correspondingFixture.HomeTeam,
+                AwayTeam = correspondingFixture.AwayTeam,
+                Odd = selection.OddValue,
+                SelectionName = selection.Name,
+                MarketName = correspondingMarket.Name,
+                FixtureName = correspondingFixture.FixtureName,
+                Type = "PushedOdd"
+            };
+
+            publishMessageTasks.Add(PublishMessageAsync(message));
+        }
+
+        await Task.WhenAll(publishMessageTasks);
     }
 
     private async Task ValidateRequest(CreateFixtureRequest request)
@@ -356,5 +428,19 @@ public class OddService : IOddService
                 SelectionId = s.Id
             };
         });
+    }
+
+    private async Task PublishMessageAsync(PushedOddMessage message)
+    {
+        try
+        {
+            _logger.LogInformation("pushing odd for selection Id : {MessageId} with body : {Body}", message.Id,
+                message.ToString());
+            await _messagePublisherService.PublishMessageAsync(message);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to publish message for MarketSelection {MessageId}", message.Id);
+        }
     }
 }

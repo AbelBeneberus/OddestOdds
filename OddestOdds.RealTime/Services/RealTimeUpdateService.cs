@@ -5,7 +5,8 @@ namespace OddestOdds.RealTime.Services;
 
 public class RealTimeUpdateService : IRealTimeUpdateService<OddUpdatedMessage>,
     IRealTimeUpdateService<OddCreatedMessage>,
-    IRealTimeUpdateService<OddDeletedMessage>
+    IRealTimeUpdateService<OddDeletedMessage>,
+    IRealTimeUpdateService<PushedOddMessage>
 {
     private readonly IHubContext<MessageHub> _hubContext;
     private readonly ILogger<RealTimeUpdateService> _logger;
@@ -29,5 +30,10 @@ public class RealTimeUpdateService : IRealTimeUpdateService<OddUpdatedMessage>,
     public async Task HandleMessageAsync(OddDeletedMessage message)
     {
         await _hubContext.Clients.All.SendAsync("ReceiveOddDeleted", message);
+    }
+
+    public async Task HandleMessageAsync(PushedOddMessage message)
+    {
+        await _hubContext.Clients.All.SendAsync("ReceiveOddPushed", message);
     }
 }
