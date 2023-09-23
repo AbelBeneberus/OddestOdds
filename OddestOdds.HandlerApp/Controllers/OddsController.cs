@@ -1,6 +1,5 @@
 ﻿using FluentValidation;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.JSInterop;
 using OddestOdds.Business.Services;
 using OddestOdds.Common.Extensions;
 using OddestOdds.Common.Models;

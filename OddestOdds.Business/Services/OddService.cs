@@ -249,7 +249,8 @@ public class OddService : IOddService
             // Fetch only the specified selections, markets, and fixtures
             var getSelectionsTask =
                 request.MarketSelectionIds.Select(id => _cacheRepository.GetCachedMarketSelectionAsync(id));
-            fetchedSelections = (await Task.WhenAll(getSelectionsTask))!;
+
+            fetchedSelections = (await Task.WhenAll(getSelectionsTask)).Where(s => s != null).ToList()!;
 
             var getMarketsTask = fetchedSelections.GroupBy(s => s.MarketId)
                 .Select(group => _cacheRepository.GetCachedMarketAsync(group.First().MarketId));
@@ -264,8 +265,17 @@ public class OddService : IOddService
 
         foreach (var selection in fetchedSelections)
         {
-            var correspondingMarket = fetchedMarkets.First(m => m.Id == selection.MarketId);
-            var correspondingFixture = fetchedFixtures.First(f => f.Id == correspondingMarket.FixtureId);
+            var correspondingMarket = fetchedMarkets.FirstOrDefault(m => m.Id == selection.MarketId);
+            if (correspondingMarket == null)
+            {
+                continue;
+            }
+
+            var correspondingFixture = fetchedFixtures.FirstOrDefault(f => f.Id == correspondingMarket.FixtureId);
+            if (correspondingFixture == null)
+            {
+                continue;
+            }
 
             PushedOddMessage message = new PushedOddMessage
             {
