@@ -8,18 +8,21 @@ public class RabbitMqTopologyCreator
     private readonly string _hostName;
     private readonly string _userName;
     private readonly string _password;
+    private readonly int _port;
     private readonly string _exchangeName = "odds_exchange";
 
-    public RabbitMqTopologyCreator(string hostName, string userName, string password)
+    public RabbitMqTopologyCreator(string hostName, string userName, string password, int port)
     {
         _hostName = hostName ?? throw new ArgumentNullException(nameof(hostName));
         _userName = userName ?? throw new ArgumentNullException(nameof(userName));
         _password = password ?? throw new ArgumentNullException(nameof(password));
+        _port = port;
     }
 
     public void Setup()
     {
-        var factory = new ConnectionFactory { HostName = _hostName, UserName = _userName, Password = _password };
+        var factory = new ConnectionFactory
+            { HostName = _hostName, UserName = _userName, Password = _password, Port = _port };
 
         try
         {
